@@ -39,9 +39,7 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 import java.net.URL;
-import java.sql.Connection;
-import java.sql.DatabaseMetaData;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.*;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Handler;
@@ -71,16 +69,16 @@ public class SchemaAnalyzer {
     }
 
     public Database analyze(Config config) throws SQLException, IOException {
-    	// don't render console-based detail unless we're generating HTML (those probably don't have a user watching)
-    	// and not already logging fine details (to keep from obfuscating those)
+        // don't render console-based detail unless we're generating HTML (those probably don't have a user watching)
+        // and not already logging fine details (to keep from obfuscating those)
 
         boolean render = config.isHtmlGenerationEnabled() && !fineEnabled;
         ProgressListener progressListener = new ConsoleProgressListener(render, commandLineArguments);
-        
-    	// if -all(evaluteAll) or -schemas given then analyzeMultipleSchemas  
+
+        // if -all(evaluteAll) or -schemas given then analyzeMultipleSchemas
         List<String> schemas = config.getSchemas();
         if (schemas != null || config.isEvaluateAllEnabled()) {
-        	return this.analyzeMultipleSchemas(config, progressListener);
+            return this.analyzeMultipleSchemas(config, progressListener);
         } else {
             File outputDirectory = commandLineArguments.getOutputDirectory();
             Objects.requireNonNull(outputDirectory);
@@ -89,48 +87,47 @@ public class SchemaAnalyzer {
         }
     }
 
-	public Database analyzeMultipleSchemas(Config config, ProgressListener progressListener)throws SQLException, IOException {
-        try {
-            // following params will be replaced by something appropriate
-            List<String> args = config.asList();
-            args.remove("-schemas");
-            args.remove("-schemata");
-           
-            List<String> schemas = config.getSchemas();
-            Database db = null;
-        	String schemaSpec = config.getSchemaSpec();
-            Connection connection = this.getConnection(config);
+    public Database analyzeMultipleSchemas(Config config, ProgressListener progressListener) throws SQLException, IOException {
+        // following params will be replaced by something appropriate
+        List<String> args = config.asList();
+        args.remove("-schemas");
+        args.remove("-schemata");
+
+        List<String> schemas = config.getSchemas();
+        Database db = null;
+        String schemaSpec = config.getSchemaSpec();
+        try (Connection connection = this.getConnection(config)) {
             DatabaseMetaData meta = connection.getMetaData();
             //-all(evaluteAll) given then get list of the database schemas
             if (schemas == null || config.isEvaluateAllEnabled()) {
-            	if(schemaSpec==null)
-            		schemaSpec=".*";
+                if (schemaSpec == null)
+                    schemaSpec = ".*";
                 System.out.println("Analyzing schemas that match regular expression '" + schemaSpec + "':");
                 System.out.println("(use -schemaSpec on command line or in .properties to exclude other schemas)");
                 schemas = DbAnalyzer.getPopulatedSchemas(meta, schemaSpec, false);
                 if (schemas.isEmpty())
-                	schemas = DbAnalyzer.getPopulatedSchemas(meta, schemaSpec, true);
+                    schemas = DbAnalyzer.getPopulatedSchemas(meta, schemaSpec, true);
                 if (schemas.isEmpty())
-                	schemas = Arrays.asList(new String[] {config.getUser()});
+                    schemas = Arrays.asList(new String[]{config.getUser()});
             }
 
-        	System.out.println("Analyzing schemas: "+schemas.toString());
-        	
-	        String dbName = config.getDb();
-	        File outputDir = commandLineArguments.getOutputDirectory();
-	        // set flag which later on used for generation rootPathtoHome link.
-	        config.setOneOfMultipleSchemas(true);
+            System.out.println("Analyzing schemas: " + schemas.toString());
 
-	        List<MustacheSchema> mustacheSchemas =new ArrayList<MustacheSchema>();
-	        MustacheCatalog  mustacheCatalog = null; 
-	        for (String schema : schemas) {
-	        	// reset -all(evaluteAll) and -schemas parametter to avoid infinite loop! now we are analyzing single schema
-	        	config.setSchemas(null);
-	            config.setEvaluateAllEnabled(false);
-	            if (dbName == null)
-	            	config.setDb(schema);
-	            else
-	        		config.setSchema(schema);
+            String dbName = config.getDb();
+            File outputDir = commandLineArguments.getOutputDirectory();
+            // set flag which later on used for generation rootPathtoHome link.
+            config.setOneOfMultipleSchemas(true);
+
+            List<MustacheSchema> mustacheSchemas = new ArrayList<MustacheSchema>();
+            MustacheCatalog mustacheCatalog = null;
+            for (String schema : schemas) {
+                // reset -all(evaluteAll) and -schemas parameter to avoid infinite loop! now we are analyzing single schema
+                config.setSchemas(null);
+                config.setEvaluateAllEnabled(false);
+                if (dbName == null)
+                    config.setDb(schema);
+                else
+                    config.setSchema(schema);
 
                 System.out.println("Analyzing " + schema);
                 System.out.flush();
@@ -138,21 +135,21 @@ public class SchemaAnalyzer {
                 db = this.analyze(schema, config, outputDirForSchema, progressListener);
                 if (db == null) //if any of analysed schema returns null
                     return db;
-                mustacheSchemas.add(new MustacheSchema(db.getSchema(),""));
+                mustacheSchemas.add(new MustacheSchema(db.getSchema(), ""));
                 mustacheCatalog = new MustacheCatalog(db.getCatalog(), "");
-	        }
+            }
 
             prepareLayoutFiles(outputDir);
-            HtmlMultipleSchemasIndexPage.getInstance().write(outputDir, dbName, mustacheCatalog ,mustacheSchemas, meta);
-	        
-	        return db;
+            HtmlMultipleSchemasIndexPage.getInstance().write(outputDir, dbName, mustacheCatalog, mustacheSchemas, meta);
+
+            return db;
         } catch (Config.MissingRequiredParameterException missingParam) {
             config.dumpUsage(missingParam.getMessage(), missingParam.isDbTypeSpecific());
             return null;
         }
     }
 
-    public Database analyze(String schema, Config config, File outputDir,  ProgressListener progressListener) throws SQLException, IOException {
+    public Database analyze(String schema, Config config, File outputDir, ProgressListener progressListener) throws SQLException, IOException {
         try {
             // set the log level for the root logger
             Logger.getLogger("").setLevel(config.getLogLevel());
@@ -160,7 +157,7 @@ public class SchemaAnalyzer {
             // clean-up console output a bit
             for (Handler handler : Logger.getLogger("").getHandlers()) {
                 if (handler instanceof ConsoleHandler) {
-                    ((ConsoleHandler)handler).setFormatter(new LogFormatter());
+                    ((ConsoleHandler) handler).setFormatter(new LogFormatter());
                     handler.setLevel(config.getLogLevel());
                 }
             }
@@ -184,10 +181,10 @@ public class SchemaAnalyzer {
             logger.fine("supportsCatalogsInTableDefinitions: " + meta.supportsCatalogsInTableDefinitions());
 
             // set default Catalog and Schema of the connection
-            if(schema == null)
-            	schema = meta.getConnection().getSchema();
-            if(catalog == null)
-            	catalog = meta.getConnection().getCatalog();
+            if (schema == null)
+                schema = meta.getConnection().getSchema();
+            if (catalog == null)
+                catalog = meta.getConnection().getCatalog();
 
             SchemaMeta schemaMeta = config.getMeta() == null ? null : new SchemaMeta(config.getMeta(), dbName, schema);
             if (config.isHtmlGenerationEnabled()) {
@@ -223,11 +220,11 @@ public class SchemaAnalyzer {
 
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder;
-			try {
-				builder = factory.newDocumentBuilder();
-			} catch (ParserConfigurationException exc) {
-				throw new RuntimeException(exc);
-			}
+            try {
+                builder = factory.newDocumentBuilder();
+            } catch (ParserConfigurationException exc) {
+                throw new RuntimeException(exc);
+            }
 
             Document document = builder.newDocument();
             Element rootNode = document.createElement("database");
@@ -259,9 +256,9 @@ public class SchemaAnalyzer {
             try {
                 document.getDocumentElement().normalize();
                 DOMUtil.printDOM(document, out);
-			} catch (TransformerException exc) {
-				throw new IOException(exc);
-			} finally {
+            } catch (TransformerException exc) {
+                throw new IOException(exc);
+            } finally {
                 out.close();
             }
 
@@ -440,6 +437,7 @@ public class SchemaAnalyzer {
 
     /**
      * This method is responsible to copy layout folder to destination directory and not copy template .html files
+     *
      * @param outputDir
      * @throws IOException
      */
@@ -470,7 +468,14 @@ public class SchemaAnalyzer {
             driverPath = config.getDriverPath() + File.pathSeparator + driverPath;
 
         DbDriverLoader driverLoader = new DbDriverLoader();
-        return driverLoader.getConnection(config, urlBuilder.build(), driverClass, driverPath);
+        Connection connection = driverLoader.getConnection(config, urlBuilder.build(), driverClass, driverPath);
+        try {
+            connection.setAutoCommit(false);
+            connection.setReadOnly(true);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return connection;
     }
 
     private void generateTables(ProgressListener progressListener, File outputDir, Database db, Collection<Table> tables, WriteStats stats) throws IOException {
@@ -488,8 +493,8 @@ public class SchemaAnalyzer {
      * dumpNoDataMessage
      *
      * @param schema String
-     * @param user String
-     * @param meta DatabaseMetaData
+     * @param user   String
+     * @param meta   DatabaseMetaData
      */
     private static void dumpNoTablesMessage(String schema, String user, DatabaseMetaData meta, boolean specifiedInclusions) throws SQLException {
         System.out.println();

@@ -61,7 +61,7 @@ public class DatabaseService {
         initTables(config, db, listener, meta);
         if (config.isViewsEnabled())
             initViews(config, db, listener, meta);
-        
+
         initCatalogs(config, db, listener);
         initSchemas(config, db, listener);
 
@@ -80,53 +80,53 @@ public class DatabaseService {
         connectTables(db, listener);
         updateFromXmlMetadata(config, db, db.getSchemaMeta());
     }
-    
-   private void initCatalogs(Config config, Database db, ProgressListener listener) throws SQLException {
 
-            String sql = Config.getInstance().getDbProperties().getProperty("selectCatalogsSql");
-            PreparedStatement stmt = null;
-			ResultSet rs =  null;
-            if (sql != null && db.getCatalog() != null) {
-                try {
-                stmt = sqlService.prepareStatement(sql,db,null);
+    private void initCatalogs(Config config, Database db, ProgressListener listener) throws SQLException {
+
+        String sql = Config.getInstance().getDbProperties().getProperty("selectCatalogsSql");
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+        if (sql != null && db.getCatalog() != null) {
+            try {
+                stmt = sqlService.prepareStatement(sql, db, null);
                 rs = stmt.executeQuery();
-                    while (rs.next()) {
-                         db.getCatalog().setComment(rs.getString("catalog_comment"));
-                         break;
-                    }
-                } catch (SQLException sqlException) {
-                    //db.getSchema().setComment(null);
-                } finally {// 
-                    stmt.close();
-                  	rs.close();
+                while (rs.next()) {
+                    db.getCatalog().setComment(rs.getString("catalog_comment"));
+                    break;
                 }
+            } catch (SQLException sqlException) {
+                //db.getSchema().setComment(null);
+            } finally {//
+                stmt.close();
+                rs.close();
             }
+        }
     }
 
     private void initSchemas(Config config, Database db, ProgressListener listener) throws SQLException {
-    	  String sql = Config.getInstance().getDbProperties().getProperty("selectSchemasSql");
-          PreparedStatement stmt = null;
-			ResultSet rs =  null;
-          if (sql != null &&  db.getSchema() != null) {
-              try {
-              stmt = sqlService.prepareStatement(sql,db,null);
-              rs = stmt.executeQuery();
-                  while (rs.next()) {
-                       db.getSchema().setComment(rs.getString("schema_comment"));
-                       break;
-                  }
-              } catch (SQLException sqlException) {
-                  //db.getSchema().setComment(null);
-              } finally {
+        String sql = Config.getInstance().getDbProperties().getProperty("selectSchemasSql");
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+        if (sql != null && db.getSchema() != null) {
+            try {
+                stmt = sqlService.prepareStatement(sql, db, null);
+                rs = stmt.executeQuery();
+                while (rs.next()) {
+                    db.getSchema().setComment(rs.getString("schema_comment"));
+                    break;
+                }
+            } catch (SQLException sqlException) {
+                //db.getSchema().setComment(null);
+            } finally {
                 stmt.close();
-              	rs.close();
-              }
-          }
+                rs.close();
+            }
+        }
     }
 
     /**
      * Create/initialize any tables in the schema.
-
+     *
      * @param metadata
      * @throws SQLException
      */
@@ -416,7 +416,7 @@ public class DatabaseService {
                                                    boolean forTables,
                                                    String... types) throws SQLException {
         String queryName = forTables ? "selectTablesSql" : "selectViewsSql";
-        String sql = config.getDbProperties().getProperty(queryName);
+        String sql = config.getDbProperty(db, queryName);
         List<BasicTableMeta> basics = new ArrayList<BasicTableMeta>();
         ResultSet rs = null;
 
@@ -425,7 +425,7 @@ public class DatabaseService {
             PreparedStatement stmt = null;
 
             try {
-                stmt = sqlService.prepareStatement(sql,db, null);
+                stmt = sqlService.prepareStatement(sql, db, null);
                 rs = stmt.executeQuery();
 
                 while (rs.next()) {
@@ -491,8 +491,7 @@ public class DatabaseService {
      * E.g. Oracle doesn't have a REMARKS column at all.
      * This method ignores those types of failures, replacing them with null.
      */
-    public String getOptionalString(ResultSet rs, String columnName)
-    {
+    public String getOptionalString(ResultSet rs, String columnName) {
         try {
             return rs.getString(columnName);
         } catch (SQLException ignore) {
@@ -507,7 +506,7 @@ public class DatabaseService {
             ResultSet rs = null;
 
             try {
-                stmt = sqlService.prepareStatement(sql, db,null);
+                stmt = sqlService.prepareStatement(sql, db, null);
                 rs = stmt.executeQuery();
 
                 while (rs.next()) {
@@ -538,7 +537,7 @@ public class DatabaseService {
             ResultSet rs = null;
 
             try {
-                stmt = sqlService.prepareStatement(sql,db, null);
+                stmt = sqlService.prepareStatement(sql, db, null);
                 rs = stmt.executeQuery();
 
                 while (rs.next()) {
@@ -575,7 +574,7 @@ public class DatabaseService {
             ResultSet rs = null;
 
             try {
-                stmt = sqlService.prepareStatement(sql,db, null);
+                stmt = sqlService.prepareStatement(sql, db, null);
                 rs = stmt.executeQuery();
 
                 while (rs.next()) {
@@ -604,7 +603,7 @@ public class DatabaseService {
             ResultSet rs = null;
 
             try {
-                stmt = sqlService.prepareStatement(sql,db, null);
+                stmt = sqlService.prepareStatement(sql, db, null);
                 rs = stmt.executeQuery();
 
                 while (rs.next()) {
@@ -643,7 +642,7 @@ public class DatabaseService {
             ResultSet rs = null;
 
             try {
-                stmt = sqlService.prepareStatement(sql,db, null);
+                stmt = sqlService.prepareStatement(sql, db, null);
                 rs = stmt.executeQuery();
 
                 while (rs.next()) {
@@ -679,7 +678,7 @@ public class DatabaseService {
             ResultSet rs = null;
 
             try {
-                stmt = sqlService.prepareStatement(sql,db, null);
+                stmt = sqlService.prepareStatement(sql, db, null);
                 rs = stmt.executeQuery();
 
                 while (rs.next()) {
@@ -714,13 +713,13 @@ public class DatabaseService {
      * @throws SQLException
      */
     private void initTableColumnComments(Config config, Database db, ProgressListener listener) throws SQLException {
-        String sql = config.getDbProperties().getProperty("selectColumnCommentsSql");
+            String sql = config.getDbProperty(db, "selectColumnCommentsSql");
         if (sql != null) {
             PreparedStatement stmt = null;
             ResultSet rs = null;
 
             try {
-                stmt = sqlService.prepareStatement(sql,db, null);
+                stmt = sqlService.prepareStatement(sql, db, null);
                 rs = stmt.executeQuery();
 
                 while (rs.next()) {
@@ -759,7 +758,7 @@ public class DatabaseService {
             ResultSet rs = null;
 
             try {
-                stmt = sqlService.prepareStatement(sql,db, null);
+                stmt = sqlService.prepareStatement(sql, db, null);
                 rs = stmt.executeQuery();
 
                 while (rs.next()) {
@@ -802,7 +801,7 @@ public class DatabaseService {
             ResultSet rs = null;
 
             try {
-                stmt = sqlService.prepareStatement(sql,db, null);
+                stmt = sqlService.prepareStatement(sql, db, null);
                 rs = stmt.executeQuery();
 
                 while (rs.next()) {
@@ -844,7 +843,7 @@ public class DatabaseService {
             ResultSet rs = null;
 
             try {
-                stmt = sqlService.prepareStatement(sql,db, null);
+                stmt = sqlService.prepareStatement(sql, db, null);
                 rs = stmt.executeQuery();
 
                 while (rs.next()) {

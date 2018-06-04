@@ -20,6 +20,7 @@ package org.schemaspy;
 
 import org.schemaspy.cli.CommandLineArgumentParser;
 import org.schemaspy.cli.CommandLineArguments;
+import org.schemaspy.model.Database;
 import org.schemaspy.model.InvalidConfigurationException;
 import org.schemaspy.util.DbSpecificConfig;
 import org.schemaspy.util.Dot;
@@ -1580,6 +1581,10 @@ public final class Config {
         String param = options.get(paramIndex).toString();
         options.remove(paramIndex);
         return param;
+    }
+
+    public String getDbProperty(Database db, String name) {
+        return getDbProperties().getProperty(db.getSchema().name + "." + name, getDbProperties().getProperty(name));
     }
 
     /**

@@ -63,7 +63,8 @@ public class SqlService {
 
         DbDriverLoader driverLoader = new DbDriverLoader();
         connection = driverLoader.getConnection(config, urlBuilder.build(), driverClass, driverPath);
-
+        connection.setReadOnly(true);
+        connection.setAutoCommit(false);
         meta = connection.getMetaData();
 
         databaseName = config.getDb();

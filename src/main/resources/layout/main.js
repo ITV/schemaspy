@@ -18,7 +18,7 @@ $(document).ready(function() {
     var table = $('#database_objects').DataTable( {
         lengthChange: false,
         paging: config.pagination,
-		pageLength: 50,
+		pageLength: 100,
 		buttons: [
 						{
 							text: 'All',

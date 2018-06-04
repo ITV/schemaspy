@@ -28,7 +28,7 @@ public class DbDriverLoaderTest {
   @Test
   public void testGetConnection() throws IOException {
     DbDriverLoader dbDriverLoader = new DbDriverLoader();
-    Config config = new Config("-t", "h2", "-u", "sa");
+    Config config = new Config("-t", "h2", "-u", "sa", "-p", "");
     Connection connection = dbDriverLoader.getConnection(config, h2.getConnectionURL(), "org.h2.Driver", "");
     assertThat(connection).isNotNull();
   }

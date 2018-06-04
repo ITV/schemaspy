@@ -109,6 +109,10 @@ public class Database {
         return tables.values();
     }
 
+    public Table getTable(String name) {
+        return tables.get(name);
+    }
+
     public Map<String, Table> getTablesMap() {
         return tables;
     }

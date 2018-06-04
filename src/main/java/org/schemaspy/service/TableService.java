@@ -19,7 +19,6 @@ import org.springframework.stereotype.Service;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Map;
@@ -85,66 +84,6 @@ public class TableService {
                     rs.close();
             }
         }
-
-        initColumnAutoUpdate(db, table, false);
-    }
-
-    /**
-     * @param forceQuotes
-     * @throws SQLException
-     */
-    private void initColumnAutoUpdate(Database db, Table table, boolean forceQuotes) throws SQLException {
-        ResultSet rs = null;
-        PreparedStatement stmt = null;
-
-        if (table.isView() || table.isRemote())
-            return;
-
-        // we've got to get a result set with all the columns in it
-        // so we can ask if the columns are auto updated
-        // Ugh!!!  Should have been in DatabaseMetaData instead!!!
-        StringBuilder sql = new StringBuilder("select * from ");
-        if (table.getSchema() != null) {
-            sql.append(table.getSchema());
-            sql.append('.');
-        } else if (table.getCatalog() != null) {
-            sql.append(table.getCatalog());
-            sql.append('.');
-        }
-
-        if (forceQuotes) {
-            String quote = db.getMetaData().getIdentifierQuoteString().trim();
-            sql.append(quote + table.getName() + quote);
-        } else
-            sql.append(db.getQuotedIdentifier(table.getName()));
-
-        sql.append(" where 0 = 1");
-
-        try {
-            stmt = db.getMetaData().getConnection().prepareStatement(sql.toString());
-            rs = stmt.executeQuery();
-
-            ResultSetMetaData rsMeta = rs.getMetaData();
-            for (int i = rsMeta.getColumnCount(); i > 0; --i) {
-                TableColumn column = table.getColumn(rsMeta.getColumnName(i));
-                column.setIsAutoUpdated(rsMeta.isAutoIncrement(i));
-            }
-        } catch (SQLException exc) {
-            if (forceQuotes) {
-                if (!table.isLogical()) {
-                    // don't completely choke just because we couldn't do this....
-                    LOGGER.warning("Failed to determine auto increment status: " + exc);
-                    LOGGER.warning("SQL: " + sql.toString());
-                }
-            } else {
-                initColumnAutoUpdate(db, table, true);
-            }
-        } finally {
-            if (rs != null)
-                rs.close();
-            if (stmt != null)
-                stmt.close();
-        }
     }
 
     /**
@@ -175,7 +114,7 @@ public class TableService {
         column.setType(rs.getInt("DATA_TYPE"));
 
         column.setDecimalDigits(rs.getInt("DECIMAL_DIGITS"));
-        Number bufLength = (Number)rs.getObject("BUFFER_LENGTH");
+        Number bufLength = (Number) rs.getObject("BUFFER_LENGTH");
         if (bufLength != null && bufLength.shortValue() > 0)
             column.setLength(bufLength.shortValue());
         else
@@ -216,8 +155,7 @@ public class TableService {
      * @throws SQLException
      */
     public void connectForeignKeys(Database db, Table table, Map<String, Table> tables) throws SQLException {
-        if (finerEnabled)
-            LOGGER.finer("Connecting foreign keys to " + table.getFullName());
+        LOGGER.finer("Connecting foreign keys to " + table.getFullName());
         ResultSet rs = null;
 
         try {
@@ -238,7 +176,7 @@ public class TableService {
                 importedKeys.add(key);
             }
 
-            for(ForeignKey importedKey : importedKeys) {
+            for (ForeignKey importedKey : importedKeys) {
                 addForeignKey(db, table, importedKey.getFK_NAME(), importedKey.getFKCOLUMN_NAME(),
                         importedKey.getPKTABLE_CAT(), importedKey.getPKTABLE_SCHEM(),
                         importedKey.getPKTABLE_NAME(), importedKey.getPKCOLUMN_NAME(),
@@ -268,7 +206,7 @@ public class TableService {
                     exportedKeys.add(key);
                 }
 
-                for(ForeignKey exportedKey : exportedKeys) {
+                for (ForeignKey exportedKey : exportedKeys) {
                     String otherCatalog = exportedKey.getFKTABLE_CAT();
                     String otherSchema = exportedKey.getFKTABLE_SCHEM();
                     if (!String.valueOf(table.getSchema()).equals(String.valueOf(otherSchema)) ||
@@ -285,6 +223,7 @@ public class TableService {
 
     /**
      * Connect to the PK's referenced by this table that live in the original schema
+     *
      * @throws SQLException
      */
     private void connectForeignKeysRemoteTable(Database db, RemoteTable remoteTable, Map<String, Table> tables) throws SQLException {
@@ -332,6 +271,7 @@ public class TableService {
      * rs.getString("PKTABLE_SCHEM");
      * rs.getString("PKTABLE_NAME");
      * rs.getString("PKCOLUMN_NAME");
+     *
      * @param tables Map
      * @param db
      * @throws SQLException
@@ -443,7 +383,7 @@ public class TableService {
 
     /**
      * Fetch the number of rows contained in this table.
-     *
+     * <p>
      * returns -1 if unable to successfully fetch the row count
      *
      * @param db Database
@@ -462,7 +402,7 @@ public class TableService {
             ResultSet rs = null;
 
             try {
-                stmt = sqlService.prepareStatement(sql,db, table.getName());
+                stmt = sqlService.prepareStatement(sql, db, table.getName());
                 rs = stmt.executeQuery();
 
                 while (rs.next()) {
@@ -475,12 +415,14 @@ public class TableService {
                 if (rs != null) {
                     try {
                         rs.close();
-                    } catch (SQLException exc) {}
+                    } catch (SQLException exc) {
+                    }
                 }
                 if (stmt != null) {
                     try {
                         stmt.close();
-                    } catch (SQLException exc) {}
+                    } catch (SQLException exc) {
+                    }
                 }
             }
         }
@@ -509,7 +451,7 @@ public class TableService {
 
     public Table addRemoteTable(Database db, String remoteCatalog, String remoteSchema, String remoteTableName, String baseContainer, boolean logical) throws SQLException {
         String fullName = db.getRemoteTableKey(remoteCatalog, remoteSchema, remoteTableName);
-        RemoteTable remoteTable = (RemoteTable)db.getRemoteTablesMap().get(fullName);
+        RemoteTable remoteTable = (RemoteTable) db.getRemoteTablesMap().get(fullName);
         if (remoteTable == null) {
             if (fineEnabled)
                 LOGGER.fine("Creating remote table " + fullName);
@@ -562,7 +504,7 @@ public class TableService {
                         TableColumn parentColumn = parent.getColumn(fk.getColumnName());
 
                         if (parentColumn == null) {
-                            LOGGER.warning("Undefined column '" + parent.getName() + '.' + fk.getColumnName() + "' referenced by '" + col.getTable()+ '.' + col + "' in XML metadata");
+                            LOGGER.warning("Undefined column '" + parent.getName() + '.' + fk.getColumnName() + "' referenced by '" + col.getTable() + '.' + col + "' in XML metadata");
                         } else {
                             /**
                              * Merely instantiating a foreign key constraint ties it
@@ -639,7 +581,7 @@ public class TableService {
         ResultSet rs = null;
 
         try {
-            stmt = sqlService.prepareStatement(selectIndexesSql,db, table.getName());
+            stmt = sqlService.prepareStatement(selectIndexesSql, db, table.getName());
             rs = stmt.executeQuery();
 
             while (rs.next()) {
@@ -658,7 +600,7 @@ public class TableService {
                     exc.printStackTrace();
                 }
             }
-            if (stmt != null)  {
+            if (stmt != null) {
                 try {
                     stmt.close();
                 } catch (Exception exc) {
@@ -692,7 +634,6 @@ public class TableService {
     }
 
     /**
-     *
      * @throws SQLException
      */
     private void initPrimaryKeys(Database db, Table table) throws SQLException {
@@ -704,8 +645,20 @@ public class TableService {
 
             rs = db.getMetaData().getPrimaryKeys(table.getCatalog(), table.getSchema(), table.getName());
 
-            while (rs.next())
-                setPrimaryColumn(table, rs);
+            if (rs.next()) {
+                do {
+                    String columnName = rs.getString("COLUMN_NAME");
+
+                    table.setPrimaryColumn(table.getColumn(columnName));
+                } while (rs.next());
+            } else {
+                //itv tables don't have primary keys so we try to infer them
+                String itvColumnName = table.getName().replace("itv_", "") + "_no";
+
+                if (table.getColumn(itvColumnName) != null) {
+                    table.setPrimaryColumn(table.getColumn(itvColumnName));
+                }
+            }
         } catch (SQLException exc) {
             if (!table.isLogical()) {
                 throw exc;
@@ -714,25 +667,6 @@ public class TableService {
             if (rs != null)
                 rs.close();
         }
-    }
-
-    /**
-     * @param rs
-     * @throws SQLException
-     */
-    private void setPrimaryColumn(Table table, ResultSet rs) throws SQLException {
-        String pkName = rs.getString("PK_NAME");
-        if (pkName == null)
-            return;
-
-        TableIndex index = table.getIndex(pkName);
-        if (index != null) {
-            index.setIsPrimaryKey(true);
-        }
-
-        String columnName = rs.getString("COLUMN_NAME");
-
-        table.setPrimaryColumn(table.getColumn(columnName));
     }
 
     private void markDownRegistryPage(Table table) {
