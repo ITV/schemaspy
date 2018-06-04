@@ -75,6 +75,13 @@ __Windows__ `mvnw.cmd build`
 __Linux__ `./mvnw build`  
 The resulting application can be found in `target`
 
+#### Landmark specific section
+__Mac__ `.mvnw install`  
+The report can be found in  
+- `./target/landmark/index.html`  
+- `./target/itvdata/index.html`  
+- `./target/ingres/index.html`
+
 #### Documentation
 You'll need sphinx installed http://www.sphinx-doc.org    
 Navigate into `docs`  
